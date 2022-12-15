@@ -5,7 +5,6 @@
 #![allow(clippy::op_ref, clippy::many_single_char_names)]
 #![deny(rustdoc::broken_intra_doc_links)]
 #![deny(missing_debug_implementations)]
-#![deny(missing_docs)]
 #![deny(unsafe_code)]
 
 pub mod arithmetic;

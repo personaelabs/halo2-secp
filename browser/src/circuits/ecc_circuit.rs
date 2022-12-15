@@ -104,7 +104,9 @@ mod tests {
     use ark_std::{end_timer, start_timer};
     use halo2_proofs::dev::MockProver;
     use halo2_proofs::pasta::EqAffine;
-    use halo2_proofs::plonk::{create_proof, keygen_pk, keygen_vk, verify_proof, SingleVerifier};
+    use halo2_proofs::plonk::{
+        create_proof, create_proof_profile, keygen_pk, keygen_vk, verify_proof, SingleVerifier,
+    };
     use halo2_proofs::poly::commitment::Params;
     use halo2_proofs::transcript::{Blake2bRead, Blake2bWrite, Challenge255};
 
@@ -117,7 +119,7 @@ mod tests {
     }
 
     #[test]
-    fn test_prove() {
+    fn test_full_prove() {
         let empty_circuit = EccCircuit {};
 
         let k = 11;

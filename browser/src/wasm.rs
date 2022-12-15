@@ -16,7 +16,9 @@ use web_sys;
 
 // necessary code for boiler plate proving
 use halo2_proofs::pasta::EqAffine;
-use halo2_proofs::plonk::{create_proof, keygen_pk, keygen_vk, verify_proof, SingleVerifier};
+use halo2_proofs::plonk::{
+    create_proof, create_proof_profile, keygen_pk, keygen_vk, verify_proof, SingleVerifier,
+};
 use halo2_proofs::poly::commitment::Params;
 use halo2_proofs::transcript::{Blake2bRead, Blake2bWrite, Challenge255};
 use js_sys::Uint8Array;
@@ -57,8 +59,17 @@ pub fn prove_simple_circuit(params_ser: JsValue) -> JsValue {
     let mut transcript = Blake2bWrite::<_, _, Challenge255<_>>::init(vec![]);
 
     web_sys::console::time_with_label("proof generation");
-    create_proof(&params, &pk, &[circuit], &[&[]], OsRng, &mut transcript)
-        .expect("proof generation should not fail");
+    create_proof_profile(
+        &params,
+        &pk,
+        &[circuit],
+        &[&[]],
+        OsRng,
+        &mut transcript,
+        &web_sys::console::time_with_label,
+        &web_sys::console::time_end_with_label,
+    )
+    .expect("proof generation should not fail");
 
     let proof: Vec<u8> = transcript.finalize();
     web_sys::console::time_end_with_label("proof generation");
@@ -125,8 +136,17 @@ pub fn prove_scalar_mult_full(params_ser: JsValue) -> JsValue {
     let transcript = &mut transcript_gen;
 
     web_sys::console::time_with_label("proof generation");
-    create_proof(params, pk, circuits, instances, rng, transcript)
-        .expect("proof generation should not fail");
+    create_proof_profile(
+        params,
+        pk,
+        circuits,
+        instances,
+        rng,
+        transcript,
+        &web_sys::console::time_with_label,
+        &web_sys::console::time_end_with_label,
+    )
+    .expect("proof generation should not fail");
 
     let proof: Vec<u8> = transcript_gen.finalize();
     web_sys::console::time_end_with_label("proof generation");

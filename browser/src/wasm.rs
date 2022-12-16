@@ -68,6 +68,7 @@ pub fn prove_simple_circuit(params_ser: JsValue) -> JsValue {
         &mut transcript,
         &web_sys::console::time_with_label,
         &web_sys::console::time_end_with_label,
+        &web_sys::console::count_with_label,
     )
     .expect("proof generation should not fail");
 
@@ -145,6 +146,7 @@ pub fn prove_scalar_mult_full(params_ser: JsValue) -> JsValue {
         transcript,
         &web_sys::console::time_with_label,
         &web_sys::console::time_end_with_label,
+        &web_sys::console::count_with_label,
     )
     .expect("proof generation should not fail");
 

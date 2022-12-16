@@ -739,6 +739,7 @@ pub fn create_proof_profile<
     transcript: &mut T,
     profile_start: &dyn Fn(&str),
     profile_end: &dyn Fn(&str),
+    console: &dyn Fn(&str),
 ) -> Result<(), Error> {
     if circuits.len() != instances.len() {
         return Err(Error::InvalidInstances);
@@ -1318,6 +1319,7 @@ pub fn create_proof_profile<
         transcript,
         profile_start,
         profile_end,
+        console,
     )?;
     profile_end("15 vanishing construct");
 

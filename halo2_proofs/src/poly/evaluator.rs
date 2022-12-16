@@ -226,6 +226,114 @@ impl<E, F: Field, B: Basis> Evaluator<E, F, B> {
         });
         result
     }
+
+    pub(crate) fn evaluate_profile(
+        &self,
+        ast: &Ast<E, F, B>,
+        domain: &EvaluationDomain<F>,
+        console: &dyn Fn(&str),
+    ) -> Polynomial<F, B>
+    where
+        E: Copy + Send + Sync,
+        F: FieldExt,
+        B: BasisOps,
+    {
+        // We're working in a single basis, so all polynomials are the same length.
+        let poly_len = self.polys.first().unwrap().len();
+        let (chunk_size, _num_chunks) = get_chunk_params(poly_len);
+        console(&format!(
+            "num_threads: {}, chunk_size: {}, num_chunks: {}",
+            multicore::current_num_threads(),
+            chunk_size,
+            _num_chunks
+        ));
+
+        struct AstContext<'a, F: FieldExt, B: Basis> {
+            domain: &'a EvaluationDomain<F>,
+            poly_len: usize,
+            chunk_size: usize,
+            chunk_index: usize,
+            polys: &'a [Polynomial<F, B>],
+        }
+
+        fn recurse<E, F: FieldExt, B: BasisOps>(
+            ast: &Ast<E, F, B>,
+            ctx: &AstContext<'_, F, B>,
+        ) -> Vec<F> {
+            match ast {
+                Ast::Poly(leaf) => B::get_chunk_of_rotated(
+                    ctx.domain,
+                    ctx.chunk_size,
+                    ctx.chunk_index,
+                    &ctx.polys[leaf.index],
+                    leaf.rotation,
+                ),
+                Ast::Add(a, b) => {
+                    let mut lhs = recurse(a, ctx);
+                    let rhs = recurse(b, ctx);
+                    for (lhs, rhs) in lhs.iter_mut().zip(rhs.iter()) {
+                        *lhs += *rhs;
+                    }
+                    lhs
+                }
+                Ast::Mul(AstMul(a, b)) => {
+                    let mut lhs = recurse(a, ctx);
+                    let rhs = recurse(b, ctx);
+                    for (lhs, rhs) in lhs.iter_mut().zip(rhs.iter()) {
+                        *lhs *= *rhs;
+                    }
+                    lhs
+                }
+                Ast::Scale(a, scalar) => {
+                    let mut lhs = recurse(a, ctx);
+                    for lhs in lhs.iter_mut() {
+                        *lhs *= scalar;
+                    }
+                    lhs
+                }
+                Ast::DistributePowers(terms, base) => terms.iter().fold(
+                    B::constant_term(ctx.poly_len, ctx.chunk_size, ctx.chunk_index, F::zero()),
+                    |mut acc, term| {
+                        let term = recurse(term, ctx);
+                        for (acc, term) in acc.iter_mut().zip(term) {
+                            *acc *= base;
+                            *acc += term;
+                        }
+                        acc
+                    },
+                ),
+                Ast::LinearTerm(scalar) => B::linear_term(
+                    ctx.domain,
+                    ctx.poly_len,
+                    ctx.chunk_size,
+                    ctx.chunk_index,
+                    *scalar,
+                ),
+                Ast::ConstantTerm(scalar) => {
+                    B::constant_term(ctx.poly_len, ctx.chunk_size, ctx.chunk_index, *scalar)
+                }
+            }
+        }
+
+        // Apply `ast` to each chunk in parallel, writing the result into an output
+        // polynomial.
+        let mut result = B::empty_poly(domain);
+        multicore::scope(|scope| {
+            for (chunk_index, out) in result.chunks_mut(chunk_size).enumerate() {
+                scope.spawn(move |_| {
+                    let ctx = AstContext {
+                        domain,
+                        poly_len,
+                        chunk_size,
+                        chunk_index,
+                        polys: &self.polys,
+                    };
+                    out.copy_from_slice(&recurse(ast, &ctx));
+                });
+            }
+        });
+        result
+    }
 }
 
 /// Struct representing the [`Ast::Mul`] case.

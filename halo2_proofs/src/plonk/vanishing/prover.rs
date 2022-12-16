@@ -137,13 +137,14 @@ impl<C: CurveAffine> Committed<C> {
         transcript: &mut T,
         profile_start: &dyn Fn(&str),
         profile_end: &dyn Fn(&str),
+        console: &dyn Fn(&str),
     ) -> Result<Constructed<C>, Error> {
         // Evaluate the h(X) polynomial's constraint system expressions for the constraints provided
         profile_start("15a1 distribute powers h(x)");
         let h_poly = poly::Ast::distribute_powers(expressions, *y); // Fold the gates together with the y challenge
         profile_end("15a1 distribute powers h(x)");
         profile_start("15a2 evaluate h(x)");
-        let h_poly = evaluator.evaluate(&h_poly, domain); // Evaluate the h(X) polynomial
+        let h_poly = evaluator.evaluate_profile(&h_poly, domain, console); // Evaluate the h(X) polynomial
         profile_end("15a2 evaluate h(x)");
 
         // Divide by t(X) = X^{params.n} - 1.

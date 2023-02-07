@@ -19,7 +19,7 @@ export const generateProofSimpleCircuit = async () => {
     init_panic_hook
   } = await import("./wasm/halo2_efficient_ecdsa.js");
 
-  console.log("number of threads", navigator.hardwareConcurrency);
+  console.log("number of threads " + navigator.hardwareConcurrency);
 
   await init();
   await init_panic_hook();
@@ -41,7 +41,7 @@ export const generateProofScalarMult = async () => {
     init_panic_hook
   } = await import("./wasm/halo2_efficient_ecdsa.js");
 
-  console.log("number of threads", navigator.hardwareConcurrency);
+  console.log("number of threads " + navigator.hardwareConcurrency);
 
   await init();
   await init_panic_hook();
@@ -64,7 +64,7 @@ export const generateProofScalarMultFull = async () => {
     init_panic_hook
   } = await import("./wasm/halo2_efficient_ecdsa.js");
 
-  console.log("number of threads", navigator.hardwareConcurrency);
+  console.log("number of threads " + navigator.hardwareConcurrency);
 
   await init();
   await init_panic_hook();

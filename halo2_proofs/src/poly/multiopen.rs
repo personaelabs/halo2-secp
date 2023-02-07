@@ -14,7 +14,7 @@ use crate::{
 mod prover;
 mod verifier;
 
-pub use prover::create_proof;
+pub use prover::{create_proof, create_proof_profile};
 pub use verifier::verify_proof;
 
 #[derive(Clone, Copy, Debug)]

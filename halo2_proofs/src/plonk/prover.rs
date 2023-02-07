@@ -1308,7 +1308,7 @@ pub fn create_proof_profile<
     profile_end("14 linearly independent");
 
     // Construct the vanishing argument's h(X) commitments
-    profile_start("15 vanishing construct");
+    console("15 vanishing construct");
     let vanishing = vanishing.construct_profile(
         params,
         domain,
@@ -1321,7 +1321,6 @@ pub fn create_proof_profile<
         profile_end,
         console,
     )?;
-    profile_end("15 vanishing construct");
 
     profile_start("16 xn");
     let x: ChallengeX<_> = transcript.squeeze_challenge_scalar();
@@ -1461,10 +1460,17 @@ pub fn create_proof_profile<
         .chain(vanishing.open(x));
     profile_end("21 evaluate instances");
 
-    profile_start("22 create proof");
-    let proof =
-        multiopen::create_proof(params, rng, transcript, instances).map_err(|_| Error::Opening);
-    profile_end("22 create proof");
+    console("22 all of create proof");
+    let proof = multiopen::create_proof_profile(
+        params,
+        rng,
+        transcript,
+        instances,
+        profile_start,
+        profile_end,
+        console,
+    )
+    .map_err(|_| Error::Opening);
 
     proof
 }

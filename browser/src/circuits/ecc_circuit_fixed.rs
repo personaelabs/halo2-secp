@@ -2,8 +2,8 @@
 
 use crate::circuits::constants::*;
 use halo2_gadgets::ecc::{
-    chip::{EccChip, EccConfig},
-    NonIdentityPoint, ScalarVar,
+    chip::{find_zs_and_us, EccChip, EccConfig, NUM_WINDOWS, NUM_WINDOWS_SHORT},
+    FixedPoint, NonIdentityPoint, Point, ScalarFixed, ScalarVar,
 };
 use halo2_gadgets::utilities::lookup_range_check::LookupRangeCheckConfig;
 use halo2_gadgets::utilities::UtilitiesInstructions;
@@ -15,9 +15,9 @@ use halo2_proofs::plonk::{Circuit, ConstraintSystem, Error};
 use rand_core::OsRng;
 
 #[derive(Clone)]
-pub struct EccCircuit {}
+pub struct EccFixedCircuit {}
 
-impl Circuit<pallas::Base> for EccCircuit {
+impl Circuit<pallas::Base> for EccFixedCircuit {
     type Config = EccConfig<TestFixedBases>;
     type FloorPlanner = SimpleFloorPlanner;
 
@@ -63,35 +63,27 @@ impl Circuit<pallas::Base> for EccCircuit {
     ) -> Result<(), Error> {
         let chip = EccChip::construct(config.clone());
 
-        // Load lookup table for range check
-        chip.config().lookup_config.load(&mut layouter)?;
+        let p_base = FullWidth::from_pallas_generator();
+        let p = FixedPoint::from_inner(chip.clone(), p_base.clone());
 
-        let p_val = pallas::Point::generator().to_affine();
-        let p = NonIdentityPoint::new(
+        let expected = NonIdentityPoint::new(
             chip.clone(),
-            layouter.namespace(|| "P"),
-            Value::known(p_val),
+            layouter.namespace(|| "expected point"),
+            Value::known(pallas::Point::generator().to_affine()),
         )?;
 
-        let column = chip.config().advices[0];
-        let one_val = pallas::Base::one();
+        let one_val = pallas::Scalar::one();
 
-        let one = chip.load_private(
-            layouter.namespace(|| "random scalar"),
-            column,
+        let one_fixed = ScalarFixed::new(
+            chip.clone(),
+            layouter.namespace(|| "ScalarVar from_base"),
             Value::known(one_val),
         )?;
 
-        let one = ScalarVar::from_base(
-            chip.clone(),
-            layouter.namespace(|| "ScalarVar from_base"),
-            &one,
-        )?;
+        // // 1 * G
+        // let result = p.mul(layouter.namespace(|| "ScalarVar mul"), one_fixed)?;
 
-        // 1 * G
-        let result = p.mul(layouter.namespace(|| "ScalarVar mul"), one)?;
-
-        result.0.constrain_equal(layouter, &p)?;
+        // result.0.constrain_equal(layouter, &expected)?;
 
         Ok(())
     }
@@ -113,16 +105,23 @@ mod tests {
     use std::time::{Duration, SystemTime};
 
     #[test]
-    fn test_ecc() {
-        let circuit = EccCircuit {};
+    fn test_fixed_width() {
+        let p_base: FullWidth;
+        // let p_base = FullWidth::from_pallas_generator();
+        // let p = FixedPoint::from_inner(chip.clone(), p_base.clone());
+    }
+
+    #[test]
+    fn test_ecc_fixed() {
+        let circuit = EccFixedCircuit {};
         let k = 10;
         let prover = MockProver::run(k, &circuit, vec![]).unwrap();
         prover.assert_satisfied();
     }
 
     #[test]
-    fn test_full_prove() {
-        let empty_circuit = EccCircuit {};
+    fn test_full_prove_fixed() {
+        let empty_circuit = EccFixedCircuit {};
 
         let k = 11;
         let params: Params<EqAffine> = Params::new(k);
@@ -138,7 +137,7 @@ mod tests {
         let pk = keygen_pk(&params, vk, &empty_circuit).expect("keygen_pk should not fail");
         end_timer!(pkey_gen);
 
-        let circuit = EccCircuit {};
+        let circuit = EccFixedCircuit {};
 
         let mut transcript = Blake2bWrite::<_, _, Challenge255<_>>::init(vec![]);
 

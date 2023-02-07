@@ -210,6 +210,14 @@ impl<E, F: Field, B: Basis> Evaluator<E, F, B> {
         // Apply `ast` to each chunk in parallel, writing the result into an output
         // polynomial.
         let mut result = B::empty_poly(domain);
+        // let ctx = AstContext {
+        //     domain,
+        //     poly_len,
+        //     chunk_size,
+        //     chunk_index,
+        //     polys: &self.polys,
+        // };
+        // result.copy_from_slice(&recurse(ast, &ctx));
         multicore::scope(|scope| {
             for (chunk_index, out) in result.chunks_mut(chunk_size).enumerate() {
                 scope.spawn(move |_| {
@@ -318,20 +326,33 @@ impl<E, F: Field, B: Basis> Evaluator<E, F, B> {
         // Apply `ast` to each chunk in parallel, writing the result into an output
         // polynomial.
         let mut result = B::empty_poly(domain);
-        multicore::scope(|scope| {
-            for (chunk_index, out) in result.chunks_mut(chunk_size).enumerate() {
-                scope.spawn(move |_| {
-                    let ctx = AstContext {
-                        domain,
-                        poly_len,
-                        chunk_size,
-                        chunk_index,
-                        polys: &self.polys,
-                    };
-                    out.copy_from_slice(&recurse(ast, &ctx));
-                });
-            }
-        });
+
+        // let mut result = B::empty_poly(domain);
+        for (chunk_index, out) in result.chunks_mut(chunk_size).enumerate() {
+            let ctx = AstContext {
+                domain,
+                poly_len,
+                chunk_size,
+                chunk_index,
+                polys: &self.polys,
+            };
+            out.copy_from_slice(&recurse(ast, &ctx));
+        }
+
+        // multicore::scope(|scope| {
+        //     for (chunk_index, out) in result.chunks_mut(chunk_size).enumerate() {
+        //         scope.spawn(move |_| {
+        //             let ctx = AstContext {
+        //                 domain,
+        //                 poly_len,
+        //                 chunk_size,
+        //                 chunk_index,
+        //                 polys: &self.polys,
+        //             };
+        //             out.copy_from_slice(&recurse(ast, &ctx));
+        //         });
+        //     }
+        // });
         result
     }
 }

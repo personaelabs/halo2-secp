@@ -144,9 +144,9 @@ pub fn prove_scalar_mult_full(params_ser: JsValue) -> JsValue {
         instances,
         rng,
         transcript,
-        &web_sys::console::time_with_label,
-        &web_sys::console::time_end_with_label,
-        &web_sys::console::count_with_label,
+        &mut web_sys::console::time_with_label,
+        &mut web_sys::console::time_end_with_label,
+        &mut web_sys::console::count_with_label,
     )
     .expect("proof generation should not fail");
 

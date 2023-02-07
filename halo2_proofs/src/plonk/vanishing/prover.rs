@@ -140,61 +140,64 @@ impl<C: CurveAffine> Committed<C> {
         console: &dyn Fn(&str),
     ) -> Result<Constructed<C>, Error> {
         // Evaluate the h(X) polynomial's constraint system expressions for the constraints provided
-        profile_start("15a1 distribute powers h(x)");
+        profile_start("15a distribute powers h(x)");
         let h_poly = poly::Ast::distribute_powers(expressions, *y); // Fold the gates together with the y challenge
-        profile_end("15a1 distribute powers h(x)");
-        profile_start("15a2 evaluate h(x)");
+        profile_end("15a distribute powers h(x)");
+
+        profile_start("15b evaluate h(x)");
         let h_poly = evaluator.evaluate_profile(&h_poly, domain, console); // Evaluate the h(X) polynomial
-        profile_end("15a2 evaluate h(x)");
+        profile_end("15b evaluate h(x)");
 
         // Divide by t(X) = X^{params.n} - 1.
-        profile_start("15b divide by t(X)");
+        profile_start("15c divide by t(X)");
         let h_poly = domain.divide_by_vanishing_poly(h_poly);
-        profile_end("15b divide by t(X)");
+        profile_end("15c divide by t(X)");
 
         // Obtain final h(X) polynomial
-        profile_start("15c obtain final h(X)");
+        profile_start("15d obtain final h(X)");
         let h_poly = domain.extended_to_coeff(h_poly);
-        profile_end("15c obtain final h(X)");
+        profile_end("15d obtain final h(X)");
 
         // Split h(X) up into pieces
-        profile_start("15d split h(X)");
+        profile_start("15e split h(X)");
         let h_pieces = h_poly
             .chunks_exact(params.n as usize)
             .map(|v| domain.coeff_from_vec(v.to_vec()))
             .collect::<Vec<_>>();
-        profile_end("15d split h(X)");
-        profile_start("15e drop h_poly");
+        profile_end("15e split h(X)");
+
+        profile_start("15f drop h_poly");
         drop(h_poly);
-        profile_end("15e drop h_poly");
-        profile_start("15f h_blinds");
+        profile_end("15f drop h_poly");
+
+        profile_start("15g h_blinds");
         let h_blinds: Vec<_> = h_pieces
             .iter()
             .map(|_| Blind(C::Scalar::random(&mut rng)))
             .collect();
-        profile_end("15f h_blinds");
+        profile_end("15g h_blinds");
 
         // Compute commitments to each h(X) piece
-        profile_start("15g commitments h(X) piece");
+        profile_start("15h commitments h(X) piece");
         let h_commitments_projective: Vec<_> = h_pieces
             .iter()
             .zip(h_blinds.iter())
             .map(|(h_piece, blind)| params.commit(h_piece, *blind))
             .collect();
         let mut h_commitments = vec![C::identity(); h_commitments_projective.len()];
-        profile_end("15g commitments h(X) piece");
+        profile_end("15h commitments h(X) piece");
 
-        profile_start("15h batch normalize");
+        profile_start("15i batch normalize");
         C::Curve::batch_normalize(&h_commitments_projective, &mut h_commitments);
         let h_commitments = h_commitments;
-        profile_end("15h batch normalize");
+        profile_end("15i batch normalize");
 
         // Hash each h(X) piece
-        profile_start("15i hash h(X) piece");
+        profile_start("15j hash h(X) piece");
         for c in h_commitments.iter() {
             transcript.write_point(*c)?;
         }
-        profile_end("15i hash h(X) piece");
+        profile_end("15j hash h(X) piece");
 
         Ok(Constructed {
             h_pieces,
